@@ -1,34 +1,95 @@
-import requests
 import json
-# import related models here
+import os
+import requests
+from .models import CarDealer, DealerReview
+from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 
 
-# Create a `get_request` to make HTTP GET requests
-# e.g., response = requests.get(url, params=params, headers={'Content-Type': 'application/json'},
-#                                     auth=HTTPBasicAuth('apikey', api_key))
+def get_request(url, api_key="", **kwargs):
+    response = {}
+    if api_key:
+        # IBM Watson NLU request.
+        try:
+            response = requests.get(url, kwargs, headers={'Content-Type': 'application/json'},
+                                    auth=HTTPBasicAuth("apikey", api_key))
+        except requests.exceptions.RequestException as error:
+            print(error)
+
+        if response.text:
+            result = json.loads(response.text)
+            return result
+
+    else:
+        try:
+            response = requests.get(url, params=kwargs, headers={'Content-Type': 'application/json'})
+        except requests.exceptions.RequestException as error:
+            print(error)
+
+        if response.text:
+            result = json.loads(response.text)
+            return result
 
 
-# Create a `post_request` to make HTTP POST requests
-# e.g., response = requests.post(url, params=kwargs, json=payload)
+def get_dealers_from_cf(url, **kwargs):
+    if kwargs:
+        response = get_request(url, **kwargs)
+        return response["docs"][0]
+    else:
+        results = []
+        json_result = get_request(url)
+        if json_result:
+            dealers = json_result["rows"]
+            for dealer in dealers:
+                dealer_doc = dealer["doc"]
+                dealer_obj = CarDealer(address=dealer_doc.get("address"), city=dealer_doc.get("city"),
+                                       full_name=dealer_doc.get("full_name"), id=dealer_doc.get("id"),
+                                       lat=dealer_doc.get("lat"), long=dealer_doc.get("long"),
+                                       short_name=dealer_doc.get("short_name"),
+                                       st=dealer_doc.get("st"), zip=dealer_doc.get("zip"))
+                results.append(dealer_obj)
+            return results
 
 
-# Create a get_dealers_from_cf method to get dealers from a cloud function
-# def get_dealers_from_cf(url, **kwargs):
-# - Call get_request() with specified arguments
-# - Parse JSON results into a CarDealer object list
+def get_dealer_reviews_from_cf(url, **kwargs):
+    results = []
+    json_result = get_request(url, **kwargs)
+    if json_result:
+        reviews = json_result["docs"]
+        for review in reviews:
+            review_obj = DealerReview(id=review.get("id"), name=review.get("name"),
+                                      dealership=review.get("dealership"), review=review.get("review"),
+                                      purchase=review.get("purchase"), purchase_date=review.get("purchase_date"),
+                                      car_make=review.get("car_make"), car_model=review.get("car_model"),
+                                      car_year=review.get("car_year"),
+                                      sentiment=analyze_review_sentiments(review.get("review")))
+            results.append(review_obj)
+
+    return results
 
 
-# Create a get_dealer_reviews_from_cf method to get reviews by dealer id from a cloud function
-# def get_dealer_by_id_from_cf(url, dealerId):
-# - Call get_request() with specified arguments
-# - Parse JSON results into a DealerView object list
+def analyze_review_sentiments(review):
+    load_dotenv()
+    key = os.getenv("WATSON_NLU_KEY")
+    url = os.getenv("WATSON_NLU_URL")
+    params = {
+        "text": review,
+        "features": ["sentiment"],
+        "return_analyzed_text": True,
+        "version": "2022-04-07"
+    }
+    response = get_request(url, key, **params)
+    if response.get("sentiment"):
+        return response["sentiment"]["document"]["label"]
 
 
-# Create an `analyze_review_sentiments` method to call Watson NLU and analyze text
-# def analyze_review_sentiments(text):
-# - Call get_request() with specified arguments
-# - Get the returned sentiment label such as Positive or Negative
-
-
-
+def post_request(url, payload, **kwargs):
+    try:
+        response = requests.post(url, json=payload, params=kwargs, headers={'Content-Type': 'application/json'})
+    except requests.exceptions.RequestException as error:
+        print(error)
+    else:
+        if response.text:
+            result = json.loads(response.text)
+            print("POST_REQUEST RESULT", result)
+            return result

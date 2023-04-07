@@ -1,18 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Dealership Review</title>
+    <title>Dealership Review - {{dealership.short_name}}</title>
     {% load static %}
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 </head>
 
-    <body>
-
-    <!--Add a nav bar here -->
-
-    <!-- Add reviews as cards -->
-
-    </body>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light mb-5" style="background-color: #d8ebfb;">
+    <div class="navbar-brand font-weight-bold">Dealership Review</div>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'djangoapp:index' %}">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'djangoapp:about' %}">About</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'djangoapp:contact' %}">Contact</a>
+            </li>
+        </ul>
+        {% if user.is_authenticated %}
+        <div class="mr-4">Logged in as <strong>{{user.username}}</strong></div>
+        <a href="{% url 'djangoapp:logout' %}" class="btn btn-sm btn-outline-primary mr-4">Logout</a>
+        {% else %}
+        <form class="form-inline my-2 my-lg-0" action="{% url 'djangoapp:login' %}" method="post">
+            {% csrf_token %}
+            <input class="form-control form-control-sm mr-sm-2" type="text" name="username" placeholder="username">
+            <input class="form-control form-control-sm mr-sm-2" type="password" name="password" placeholder="password">
+            <button class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Login</button>
+            <a class="btn btn-sm btn-link my-2 my-sm-0" href="{% url 'djangoapp:registration' %}">Sign Up</a>
+        </form>
+        {% endif %}
+    </div>
+</nav>
+<div class="container">
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="d-inline mb-0 mr-4">Reviews for {{dealership.full_name}}</h2>
+        {% if user.is_authenticated %}
+        <a href="{% url 'djangoapp:add_review' dealership.id %}" class="btn btn-outline-primary">Add a review</a>
+        {% endif %}
+    </div>
+    <div class="card-columns">
+        {% for review in reviews %}
+        <div class="card border-dark mb-3">
+            <div class="card-header d-flex align-items-center p-0" style="min-height: 47px;">
+                {% if review.sentiment == 'positive' %}
+                <img width="30px" class="card-img-left m-2" src="{{MEDIA_URL}}/emoji/positive.png">
+                {% elif review.sentiment == 'neutral' %}
+                <img width="30px" class="card-img-left m-2" src="{{MEDIA_URL}}/emoji/neutral.png">
+                {% elif review.sentiment == 'negative' %}
+                <img width="30px" class="card-img-left m-2" src="{{MEDIA_URL}}/emoji/negative.png">
+                {% endif %}
+                {% if review.purchase %}
+                <h5 class="card-title mb-0 ml-2">
+                    {{review.car_year}} {{review.car_make}} {{review.car_model}}
+                </h5>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{review.review}}</p>
+                <p class="card-text"><small class="text-muted">{{review.name}}</small></p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+</body>
 
 </html>
