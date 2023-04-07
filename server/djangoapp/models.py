@@ -14,7 +14,8 @@ class CarModel(models.Model):
     car_types = [
         ("SEDAN", "Sedan"),
         ("SUV", "SUV"),
-        ("WAGON", "Wagon")
+        ("WAGON", "Wagon"),
+        ("SPORT", "Sport")
     ]
 
     name = models.CharField(max_length=30)
